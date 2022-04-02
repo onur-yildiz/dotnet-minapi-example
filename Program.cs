@@ -2,7 +2,9 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
+builder.Services.AddCors();
 WebApplication app = builder.Build();
+app.UseCors(builder => builder.SetIsOriginAllowedToAllowWildcardSubdomains().WithOrigins("http://localhost:3000"));
 HttpClient client = new();
 
 
