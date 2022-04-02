@@ -4,7 +4,15 @@ using Microsoft.AspNetCore.Mvc;
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCors();
 WebApplication app = builder.Build();
-app.UseCors(builder => builder.SetIsOriginAllowedToAllowWildcardSubdomains().WithOrigins("http://localhost:3000"));
+app.UseCors(builder => 
+    builder.SetIsOriginAllowed(
+        origin => 
+        { 
+            var host = new Uri(origin).Host; 
+            return host == "localhost" || host == "spcase-app.vercel.app"; 
+        }
+    )
+);
 HttpClient client = new();
 
 
@@ -23,7 +31,7 @@ app.MapGet(
 
         if (content?.Body?.IntraDayTradeHistoryList.Count > 0)
         {
-            
+
             List<TradeHistory> FilteredTradeHistoryList = content.Body.IntraDayTradeHistoryList.FindAll(tradeHistory => tradeHistory.Conract.StartsWith("PH"));
             List<TradeHistoryStatistics> tradeHistoryStatisticsList = new();
 
@@ -32,7 +40,8 @@ app.MapGet(
                 if (!tradeHistoryStatisticsList.Any(stats => stats.Conract == tradeHistory.Conract))
                 {
                     tradeHistoryStatisticsList.Add(new TradeHistoryStatistics(tradeHistory.Conract));
-                } else
+                }
+                else
                 {
                     tradeHistoryStatisticsList.Find(stats => stats.Conract == tradeHistory.Conract)!.AddTransaction(tradeHistory);
                 }
