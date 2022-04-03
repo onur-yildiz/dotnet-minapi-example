@@ -1,6 +1,6 @@
 # README
 
-API Link: [**https://spcase-server.herokuapp.com/**](https://spcase-server.herokuapp.com/)\
+API Link: [**https://spcase-server.herokuapp.com/**](https://spcase-server.herokuapp.com/) (if you are going to make time consuming requests run this API locally, since heroku timeout is 30s.)\
 [**App Repository**](https://github.com/onur-yildiz/spcase-app)\
 [**App Deployment**](https://spcase-app.vercel.app/)
 
