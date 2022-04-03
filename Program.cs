@@ -67,6 +67,7 @@ static HashSet<TradeHistoryStatistics> GetStatisticsSummary(List<TradeHistory> t
             value.AddTransaction(tradeHistory);
             continue;
         }
+        statistics.AddTransaction(tradeHistory);
         tradeHistoryStatistics.Add(statistics);
     }
 
