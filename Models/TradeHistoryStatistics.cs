@@ -21,6 +21,17 @@ namespace Models
             TotalTransactionAmount += tradeHistory.Quantity / 10;
             WeightedAveragePrice = TotalTransactionFee / TotalTransactionAmount;
         }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is TradeHistoryStatistics statistics &&
+                   Conract == statistics.Conract;
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Conract);
+        }
     }
 
 }

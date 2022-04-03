@@ -22,37 +22,53 @@ app.MapGet(
     [FromQuery(Name = "endDate")] string endDate
   ) =>
 {
-    var client = new HttpClient();
-    var response = await client.GetAsync($"https://seffaflik.epias.com.tr/transparency/service/market/intra-day-trade-history?startDate={startDate}&endDate={endDate}");
-
-    if (!response.IsSuccessStatusCode) return Results.StatusCode((int)response.StatusCode);
-
-    var data = await response.Content.ReadAsStringAsync();
-    var content = JsonSerializer.Deserialize<Content>(data, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-    if (content?.Body?.IntraDayTradeHistoryList.Count == 0) return Results.NotFound();
-
-    var filteredTradeHistoryList = content!.Body!.IntraDayTradeHistoryList.Where(tradeHistory => tradeHistory.Conract.StartsWith("PH"));
-    var tradeHistoryStatisticsList = new List<TradeHistoryStatistics>();
-
-    foreach (var tradeHistory in filteredTradeHistoryList)
+    try
     {
-        if (!tradeHistoryStatisticsList.Any(stats => stats.Conract == tradeHistory.Conract))
-        {
-            tradeHistoryStatisticsList.Add(new TradeHistoryStatistics(tradeHistory.Conract));
-        }
-        else
-        {
-            tradeHistoryStatisticsList.Find(stats => stats.Conract == tradeHistory.Conract)!.AddTransaction(tradeHistory);
-        }
-    }
+        var response = await FetchFromEpiasAsync(startDate, endDate);
+        if (!response.IsSuccessStatusCode) return Results.StatusCode((int)response.StatusCode);
 
-    return Results.Ok(tradeHistoryStatisticsList);
+        var tradeHistoryList = await ExtractTradeHistoryListAsync(response);
+        if (tradeHistoryList.Count == 0) return Results.NotFound();
+
+        var statisticsSummary = GetStatisticsSummary(tradeHistoryList);
+        return Results.Ok(statisticsSummary);
+    } catch (Exception ex)
+    {
+        app.Logger.LogError(ex.ToString());
+        return Results.Problem(statusCode: 500);
+    }
 });
 
 app.Run();
 
+static async Task<HttpResponseMessage> FetchFromEpiasAsync (string startDate, string endDate)
+{
+    var client = new HttpClient();
+    return await client.GetAsync($"https://seffaflik.epias.com.tr/transparency/service/market/intra-day-trade-history?startDate={startDate}&endDate={endDate}");
+}
 
+static async Task<List<TradeHistory>> ExtractTradeHistoryListAsync(HttpResponseMessage response)
+{
+    var data = await response.Content.ReadAsStringAsync();
+    var content = JsonSerializer.Deserialize<ResponseContent>(data, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    return content?.Body?.IntraDayTradeHistoryList ?? new List<TradeHistory>();
+}
 
+static HashSet<TradeHistoryStatistics> GetStatisticsSummary(List<TradeHistory> tradeHistoryList)
+{
+    var filteredTradeHistoryList = tradeHistoryList.Where(tradeHistory => tradeHistory.Conract.StartsWith("PH"));
+    var tradeHistoryStatistics = new HashSet<TradeHistoryStatistics>();
+    
+    foreach (var tradeHistory in filteredTradeHistoryList)
+    {
+        var statistics = new TradeHistoryStatistics(tradeHistory.Conract);
+        if (tradeHistoryStatistics.TryGetValue(statistics, out var value))
+        {
+            value.AddTransaction(tradeHistory);
+            continue;
+        }
+        tradeHistoryStatistics.Add(statistics);
+    }
 
-
+    return tradeHistoryStatistics;
+}
